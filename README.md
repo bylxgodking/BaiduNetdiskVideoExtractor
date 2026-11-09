@@ -8,6 +8,96 @@
 
 **无需下载视频文件本身。**
 
+> 🧰 **新版入口（推荐）**：项目已扩展为「启动器 + 按需加载模块」的工具箱，支持 AI 字幕批量导出、群文件转存、批量重命名等。请先阅读下方「🧰 工具箱用法」章节。
+> 本文档其余章节记录的是最初的 `run.js` 视频时长脚本（仍可单独运行），属于早期版本说明。
+
+------
+
+# 🧰 工具箱用法（按需加载）
+
+工具箱由一个轻量启动器和一组独立模块组成。**启动器里不含业务代码**：粘贴运行后先出现功能菜单，点击某个功能才下载并执行对应模块。
+
+```text
+baidu-netdisk-toolkit.js          启动器：功能菜单 / 加载器 / 配置注入
+modules/
+├── subtitle-export.js            ① 字幕批量导出
+├── group-transfer-compare.js     ② 群文件转存（对比断点）
+├── group-transfer-recursive.js   ③ 群文件转存（递归）
+├── batch-rename.js               ④ 批量重命名
+└── duration-to-xlsx.js           ⑤ 视频时长导出 Excel
+```
+
+## 快速开始
+
+1. 用 Chrome / Edge 登录 `https://pan.baidu.com`，进入要处理的目录；群文件模式先在网页里点开群「文件库」浏览一次。
+2. 按 `F12` → `Console`，粘贴 `baidu-netdisk-toolkit.js` 全文并回车，右下角出现「百度网盘工具箱」菜单。
+3. 点击需要的功能。启动器会拉取对应模块源码、注入配置并在当前页面执行；功能面板随后出现在右下角。模块源码只缓存在内存里，刷新页面即清空。
+
+## 功能菜单
+
+| 功能 | 模块 | 说明 |
+| --- | --- | --- |
+| ① 字幕批量导出 | `modules/subtitle-export.js` | 我的网盘 / 群组共享文件库；目录树多选、按目录分层导出 TXT / SRT / ZIP、接口诊断、导出诊断数据 |
+| ② 群文件转存（对比断点） | `modules/group-transfer-compare.js` | 先对比目标目录已存在文件，再批量转存，可断点续传；**需配置** |
+| ③ 群文件转存（递归） | `modules/group-transfer-recursive.js` | 按目录递归创建并转存，适合首次全量转存；**需配置** |
+| ④ 批量重命名 | `modules/batch-rename.js` | 正则 / 去前后缀 / 查找替换；先预览再执行，冲突会先删同名文件（进回收站） |
+| ⑤ 视频时长导出 Excel | `modules/duration-to-xlsx.js` | 启动后自动扫描当前目录并下载 `百度网盘视频时长.xlsx` |
+
+> 群共享视频通常没有百度智能字幕。若字幕导出提示「无字幕」，先用 ② 或 ③ 转存到自己的网盘，再回到 ① 用「我的网盘」模式导出。
+
+## 模块从哪里加载
+
+模块托管在本仓库的 `modules/` 目录，启动时按以下顺序尝试：
+
+1. 自定义根 URL（在「高级」里填写，可用于本地服务器或私有镜像）
+2. `https://cdn.jsdelivr.net/gh/bylxgodking/BaiduNetdiskVideoExtractor@main/modules/`
+3. `https://fastly.jsdelivr.net/gh/bylxgodking/BaiduNetdiskVideoExtractor@main/modules/`
+4. `https://raw.githubusercontent.com/bylxgodking/BaiduNetdiskVideoExtractor/main/modules/`
+
+全部失败时，可在「高级 / 离线加载」里粘贴从仓库复制的模块源码执行。每个模块本身也是独立可运行的脚本，可以单独复制到 Console 使用（此时需手动填写模块内的 `CONFIG`）。
+
+模块更新后点「清除模块缓存」，或用 `__BD_TOOLKIT__.pin('<commit>')` 固定到某次提交，避免 CDN 缓存。
+
+## 配置（仅转存模块需要）
+
+在菜单「配置」区展开后填写一次即可，启动器会在加载模块时把源码里的 `PASTE_` 占位值替换进去，不需要修改仓库文件：
+
+| 字段 | 说明 |
+| --- | --- |
+| `gid` / `msg_id` / `from_uk` | 群与消息标识，从群「文件库」页面请求或 ① 的诊断数据里取得 |
+| `source_fs_id` | ② 要转存的群文件夹 fs_id |
+| `root_fs_id` | ③ 群文件库根目录 fs_id |
+| `target_root` | 自己网盘的目标目录，如 `/字幕转存` |
+| `bdstoken` | 可点「自动填 bdstoken」从当前页面读取 |
+| `logId` / `dp-logid` | 从浏览器 Network 里一次成功的请求中复制 |
+
+配置**只保存在当前页面内存**，不写 `localStorage`、不上传、不提交仓库。填完后再点一次功能按钮即可；未填完时启动器会列出还缺哪些字段并阻止执行。
+
+## 常用命令
+
+```js
+__BD_TOOLKIT__.show()                   // 重新打开菜单
+__BD_TOOLKIT__.hide()                   // 关闭菜单
+__BD_TOOLKIT__.launch('subtitle')       // 直接启动某个功能
+__BD_TOOLKIT__.launch('compare', true)  // 强制重新执行
+__BD_TOOLKIT__.clearCache()             // 清除模块源码缓存
+__BD_TOOLKIT__.pin('b9240b1')           // 固定到某个 commit / 分支
+__BD_TOOLKIT__.setBase('http://localhost:8000/modules/') // 自定义模块源
+__BD_TOOLKIT__.config                   // 查看当前内存配置
+__BD_TOOLKIT__.urlsFor('subtitle-export.js') // 查看候选下载地址
+```
+
+`launch()` 可用的 id：`subtitle`、`compare`、`recursive`、`rename`、`duration`。
+
+## 隐私与安全
+
+- 所有脚本只在用户已登录的 `pan.baidu.com` 页面内运行，复用当前浏览器会话；不读取 BDUSS / Cookie，不需要输入账号密码，不下载视频本体。
+- 模块代码来自 GitHub / CDN 并在网盘页面里执行，属于「远程加载代码」：**请确认仓库与分支可信**，对外分发时建议用 `pin()` 固定到具体 commit。
+- 含真实 `bdstoken` / `logId` 的本地调试文件（`end.txt`、`转存.txt`）已被 `.gitignore` 忽略，不会进入仓库。
+- 在浏览器 Console 粘贴脚本有固有风险，请确认代码来源可信后再运行。
+
+> 以下「✨ 功能」及其后章节为早期 `run.js`（视频时长导出）的文档，仍然有效。
+
 ------
 
 ## ✨ 功能
@@ -363,6 +453,8 @@ HH:MM:SS
 ------
 
 # 📁 项目结构
+
+> 以下为早期版本结构；当前实际文件见上方「🧰 工具箱用法」中的目录说明。
 
 ```text
 BaiduNetdiskVideoExtractor/
