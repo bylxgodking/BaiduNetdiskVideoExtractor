@@ -1,0 +1,14 @@
+# 本地 Agent Skill 工作目录（SKILL.md、分散脚本、打包 zip），不纳入仓库
+skills/
+
+# 含真实会话凭据的本地调试脚本（脱敏后的功能已融合进 baidu-netdisk-toolkit.js）
+end.txt
+转存.txt
+6.txt
+
+# 第三方 GPL3 油猴脚本（已失效，不纳入分发）
+百度网盘智能字幕下载.user.js
+
+# 一次性构建脚本 / 临时产物
+_build_toolkit.py
+*.tmp
